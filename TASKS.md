@@ -16,16 +16,16 @@
 - [x] 1.1.6 — Verify path aliases (@/) work in tsconfig.json
 
 ### 1.2 Supabase Setup & Database Schema (~5 hrs)
-- [ ] 1.2.1 — Create Supabase project, copy URL + keys into .env.local
-- [ ] 1.2.2 — Write SQL migration: users table (extends auth.users)
-- [ ] 1.2.3 — Write SQL migration: interview_sessions table
-- [ ] 1.2.4 — Write SQL migration: interview_messages table
-- [ ] 1.2.5 — Write SQL migration: interview_feedback table
-- [ ] 1.2.6 — Configure RLS policies for all tables
-- [ ] 1.2.7 — Create Supabase browser client (lib/supabase/client.ts)
-- [ ] 1.2.8 — Create Supabase server client (lib/supabase/server.ts)
-- [ ] 1.2.9 — Create Supabase Storage bucket for recordings
-- [ ] 1.2.10 — Generate TypeScript types from schema (types/database.ts)
+- [ ] 1.2.1 — Create Supabase project, copy URL + keys into .env.local (MANUAL — do on supabase.com)
+- [x] 1.2.2 — Write SQL migration: users table (extends auth.users)
+- [x] 1.2.3 — Write SQL migration: interview_sessions table
+- [x] 1.2.4 — Write SQL migration: interview_messages table
+- [x] 1.2.5 — Write SQL migration: interview_feedback table
+- [x] 1.2.6 — Configure RLS policies for all tables
+- [x] 1.2.7 — Create Supabase browser client (lib/supabase/client.ts)
+- [x] 1.2.8 — Create Supabase server client (lib/supabase/server.ts)
+- [ ] 1.2.9 — Create Supabase Storage bucket for recordings (MANUAL — do in Supabase dashboard)
+- [x] 1.2.10 — Generate TypeScript types from schema (types/database.ts)
 
 ### 1.3 Authentication (~6 hrs)
 - [ ] 1.3.1 — Enable email/password auth in Supabase dashboard
@@ -193,7 +193,7 @@
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 38 | 6 | In Progress |
+| Phase 1: Foundation | 38 | 14 | In Progress |
 | Phase 2: Core Features | 39 | 0 | Not Started |
 | Phase 3: Polish & Testing | 26 | 0 | Not Started |
 | Phase 4: Launch | 8 | 0 | Not Started |
