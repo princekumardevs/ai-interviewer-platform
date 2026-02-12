@@ -21,7 +21,7 @@ model User {
   // Custom fields
   targetRole          String  @default("Software Engineer") @map("target_role")
   experienceLevel     String  @default("mid") @map("experience_level")
-  interviewsRemaining Int     @default(5) @map("interviews_remaining")
+  interviewsRemaining Int     @default(100) @map("interviews_remaining")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

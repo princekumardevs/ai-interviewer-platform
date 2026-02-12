@@ -99,8 +99,9 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const creditsUsed = 5 - user.interviewsRemaining;
-  const creditsPercent = (user.interviewsRemaining / 5) * 100;
+  const totalCredits = 100;
+  const creditsUsed = totalCredits - user.interviewsRemaining;
+  const creditsPercent = (user.interviewsRemaining / totalCredits) * 100;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -129,7 +130,7 @@ export default function DashboardPage() {
             </div>
             <Progress value={creditsPercent} className="mt-2" />
             <p className="mt-1 text-xs text-muted-foreground">
-              {creditsUsed} of 5 used
+              {creditsUsed} of {totalCredits} used
             </p>
           </CardContent>
         </Card>

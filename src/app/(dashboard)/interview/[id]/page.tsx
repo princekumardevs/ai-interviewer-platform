@@ -15,6 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useInterviewStore, type Message } from '@/stores/interviewStore';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useTextToSpeech } from '@/hooks/useTextToSpeech';
+import { AudioVisualizer } from '@/components/shared/AudioVisualizer';
 import {
   Send,
   Loader2,
@@ -23,6 +26,11 @@ import {
   User,
   Bot,
   AlertCircle,
+  Mic,
+  MicOff,
+  Keyboard,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 export default function InterviewSessionPage() {
@@ -51,9 +59,73 @@ export default function InterviewSessionPage() {
 
   const [input, setInput] = useState('');
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [inputMode, setInputMode] = useState<'text' | 'voice'>('text');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Voice hooks
+  const tts = useTextToSpeech({ rate: 1.05 });
+  const ttsRef = useRef(tts);
+  useEffect(() => { ttsRef.current = tts; }, [tts]);
+
+  const sendMessageFromVoice = useCallback(async (voiceText: string) => {
+    if (!voiceText.trim() || isAiThinking || status !== 'in_progress') return;
+
+    addMessage({
+      role: 'user',
+      content: voiceText.trim(),
+      timestamp: new Date().toISOString(),
+    });
+
+    setAiThinking(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/interviews/${sessionId}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: voiceText.trim() }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send message');
+
+      const data = await response.json();
+      addMessage({
+        id: data.id,
+        role: 'assistant',
+        content: data.content,
+        timestamp: data.timestamp,
+      });
+
+      // Speak AI response via ref to avoid circular dependency
+      if (ttsRef.current.isEnabled && data.content) {
+        ttsRef.current.speak(data.content);
+      }
+    } catch {
+      setError('Failed to get response. Please try again.');
+    } finally {
+      setAiThinking(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAiThinking, status, sessionId, addMessage, setAiThinking, setError]);
+
+  const {
+    transcript,
+    isListening,
+    isSupported: sttSupported,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechToText({
+    onResult: (finalText) => {
+      resetTranscript();
+      sendMessageFromVoice(finalText);
+    },
+    onError: (err) => {
+      toast({ title: 'Voice Error', description: err, variant: 'destructive' });
+    },
+  });
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -112,6 +184,11 @@ export default function InterviewSessionPage() {
           content: startData.content,
           timestamp: new Date().toISOString(),
         });
+
+        // Speak the opening message
+        if (tts.isEnabled && startData.content) {
+          tts.speak(startData.content);
+        }
 
         setStatus('in_progress');
         setStartedAt(new Date().toISOString());
@@ -186,6 +263,11 @@ export default function InterviewSessionPage() {
         content: data.content,
         timestamp: data.timestamp,
       });
+
+      // Speak AI response if TTS is enabled
+      if (tts.isEnabled && data.content) {
+        tts.speak(data.content);
+      }
     } catch {
       setError('Failed to get response. Please try again.');
       toast({
@@ -210,6 +292,8 @@ export default function InterviewSessionPage() {
   // End interview
   async function handleEndInterview() {
     setStatus('ending');
+    if (isListening) stopListening();
+    if (tts.isSpeaking) tts.stop();
     try {
       const res = await fetch(`/api/interviews/${sessionId}/end`, {
         method: 'POST',
@@ -416,29 +500,127 @@ export default function InterviewSessionPage() {
       {/* Input Area */}
       {status === 'in_progress' && (
         <div className="border-t p-4">
-          <div className="mx-auto flex max-w-3xl gap-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your response... (Enter to send, Shift+Enter for new line)"
-              className="min-h-[60px] max-h-[150px] resize-none"
-              disabled={isAiThinking}
-            />
+          {/* Mode toggle */}
+          <div className="mx-auto mb-2 flex max-w-3xl items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={inputMode === 'text' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setInputMode('text');
+                  if (isListening) stopListening();
+                }}
+                className="gap-1.5"
+              >
+                <Keyboard className="h-3.5 w-3.5" />
+                Text
+              </Button>
+              <Button
+                variant={inputMode === 'voice' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setInputMode('voice')}
+                disabled={!sttSupported}
+                className="gap-1.5"
+                title={!sttSupported ? 'Speech recognition not supported in this browser' : ''}
+              >
+                <Mic className="h-3.5 w-3.5" />
+                Voice
+              </Button>
+            </div>
+            {/* TTS toggle */}
             <Button
-              onClick={sendMessage}
-              disabled={!input.trim() || isAiThinking}
-              size="icon"
-              className="h-[60px] w-[60px] shrink-0"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                tts.setEnabled(!tts.isEnabled);
+                if (tts.isSpeaking) tts.stop();
+              }}
+              className="gap-1.5 text-muted-foreground"
+              title={tts.isEnabled ? 'Disable AI voice' : 'Enable AI voice'}
             >
-              {isAiThinking ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+              {tts.isEnabled ? (
+                <Volume2 className="h-3.5 w-3.5" />
               ) : (
-                <Send className="h-5 w-5" />
+                <VolumeX className="h-3.5 w-3.5" />
               )}
+              {tts.isEnabled ? 'AI Voice On' : 'AI Voice Off'}
             </Button>
           </div>
+
+          {inputMode === 'text' ? (
+            /* Text input */
+            <div className="mx-auto flex max-w-3xl gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your response... (Enter to send, Shift+Enter for new line)"
+                className="min-h-[60px] max-h-[150px] resize-none"
+                disabled={isAiThinking}
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!input.trim() || isAiThinking}
+                size="icon"
+                className="h-[60px] w-[60px] shrink-0"
+              >
+                {isAiThinking ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
+          ) : (
+            /* Voice input */
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+              {/* Voice status */}
+              <div className="flex items-center gap-3">
+                <AudioVisualizer isActive={isListening} barCount={7} height={40} />
+                <span className="text-sm text-muted-foreground">
+                  {isAiThinking
+                    ? 'AI is thinking...'
+                    : tts.isSpeaking
+                    ? 'AI is speaking...'
+                    : isListening
+                    ? 'Listening... speak now'
+                    : 'Click the microphone to start'}
+                </span>
+              </div>
+
+              {/* Interim transcript preview */}
+              {transcript && (
+                <div className="w-full rounded-lg border bg-muted/50 px-4 py-2 text-sm text-muted-foreground italic">
+                  {transcript}
+                </div>
+              )}
+
+              {/* Mic button */}
+              <Button
+                size="lg"
+                variant={isListening ? 'destructive' : 'default'}
+                className="h-16 w-16 rounded-full"
+                onClick={() => {
+                  if (isListening) {
+                    stopListening();
+                  } else {
+                    if (tts.isSpeaking) tts.stop();
+                    startListening();
+                  }
+                }}
+                disabled={isAiThinking || tts.isSpeaking}
+              >
+                {isAiThinking ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : isListening ? (
+                  <MicOff className="h-6 w-6" />
+                ) : (
+                  <Mic className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+          )}
           {error && (
             <p className="mt-2 text-center text-xs text-destructive">{error}</p>
           )}
