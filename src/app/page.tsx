@@ -1,101 +1,180 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Navbar } from '@/components/shared/Navbar';
+import { Footer } from '@/components/shared/Footer';
+import {
+  Mic,
+  Brain,
+  BarChart3,
+  Settings2,
+  ArrowRight,
+  CheckCircle2,
+} from 'lucide-react';
 
-export default function Home() {
+const features = [
+  {
+    icon: Mic,
+    title: 'Real-Time Voice Conversations',
+    description:
+      'Practice with natural voice conversations. Speak freely and get real-time responses from the AI interviewer.',
+  },
+  {
+    icon: Brain,
+    title: 'AI-Powered Intelligence',
+    description:
+      'Powered by advanced AI that asks contextual follow-up questions and adapts to your responses.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Detailed Feedback & Scoring',
+    description:
+      'Get comprehensive feedback with scores on technical depth, communication, structure, and confidence.',
+  },
+  {
+    icon: Settings2,
+    title: 'Fully Customizable',
+    description:
+      'Choose your target role, experience level, interview type, and duration for a tailored experience.',
+  },
+];
+
+const steps = [
+  {
+    step: '1',
+    title: 'Set Up Your Interview',
+    description:
+      'Choose your target role, interview type (technical or behavioral), and preferred duration.',
+  },
+  {
+    step: '2',
+    title: 'Talk to the AI Interviewer',
+    description:
+      'Have a natural voice conversation. The AI asks real interview questions and contextual follow-ups.',
+  },
+  {
+    step: '3',
+    title: 'Get Detailed Feedback',
+    description:
+      'Review your performance with detailed scores, strengths, areas for improvement, and actionable tips.',
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden">
+          <div className="container mx-auto px-4 py-24 md:py-32">
+            <div className="mx-auto max-w-3xl text-center">
+              <div className="mb-6 inline-flex items-center rounded-full border px-4 py-1.5 text-sm text-muted-foreground">
+                <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                Free to try — 3 practice interviews included
+              </div>
+              <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                Ace Your Next Interview with{' '}
+                <span className="text-primary">AI-Powered</span> Practice
+              </h1>
+              <p className="mb-8 text-lg text-muted-foreground md:text-xl">
+                Practice real interviews through natural voice conversations with an AI
+                interviewer. Get instant feedback, improve your skills, and land your dream job.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button size="lg" asChild className="text-base px-8">
+                  <Link href="/signup">
+                    Start Practicing Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="text-base px-8">
+                  <Link href="/#how-it-works">See How It Works</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+          {/* Gradient background decoration */}
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_60%,hsl(var(--primary)/0.08),transparent)]" />
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="border-t bg-muted/30">
+          <div className="container mx-auto px-4 py-20 md:py-24">
+            <div className="mx-auto max-w-2xl text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+                Everything You Need to Prepare
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                A complete interview practice platform designed to help you perform your best.
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {features.map((feature) => (
+                <Card key={feature.title} className="border bg-background">
+                  <CardContent className="pt-6">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                      <feature.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="mb-2 font-semibold text-lg">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section id="how-it-works" className="border-t">
+          <div className="container mx-auto px-4 py-20 md:py-24">
+            <div className="mx-auto max-w-2xl text-center mb-12">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+                How It Works
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Get started in minutes. No scheduling, no pressure.
+              </p>
+            </div>
+            <div className="mx-auto max-w-4xl">
+              <div className="grid gap-8 md:grid-cols-3">
+                {steps.map((item) => (
+                  <div key={item.step} className="relative text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-bold">
+                      {item.step}
+                    </div>
+                    <h3 className="mb-2 font-semibold text-lg">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="border-t bg-muted/30">
+          <div className="container mx-auto px-4 py-20 md:py-24">
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+                Ready to Ace Your Interview?
+              </h2>
+              <p className="text-muted-foreground text-lg mb-8">
+                Join now and start practicing with your AI interviewer. It&apos;s free to get started.
+              </p>
+              <Button size="lg" asChild className="text-base px-8">
+                <Link href="/signup">
+                  Get Started — It&apos;s Free
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+      <Footer />
     </div>
   );
 }

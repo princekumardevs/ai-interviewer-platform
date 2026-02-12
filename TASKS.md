@@ -28,29 +28,29 @@
 - [x] 1.2.10 — Generate TypeScript types from schema (types/database.ts)
 
 ### 1.3 Authentication (~6 hrs)
-- [ ] 1.3.1 — Enable email/password auth in Supabase dashboard
-- [ ] 1.3.2 — Create Next.js middleware for auth (middleware.ts)
-- [ ] 1.3.3 — Build POST /api/auth/signup route
-- [ ] 1.3.4 — Build POST /api/auth/login route
-- [ ] 1.3.5 — Build POST /api/auth/logout route
-- [ ] 1.3.6 — Create useAuth hook (check session, user state)
-- [ ] 1.3.7 — Create Zustand auth store (stores/authStore.ts)
+- [x] 1.3.1 — Enable email/password auth in Supabase dashboard
+- [x] 1.3.2 — Create Next.js middleware for auth (middleware.ts)
+- [x] 1.3.3 — Build POST /api/auth/signup route
+- [x] 1.3.4 — Build POST /api/auth/login route
+- [x] 1.3.5 — Build POST /api/auth/logout route
+- [x] 1.3.6 — Create useAuth hook (check session, user state)
+- [x] 1.3.7 — Create Zustand auth store (stores/authStore.ts)
 - [ ] 1.3.8 — Test auth flow end-to-end (signup → login → protected route → logout)
 
 ### 1.4 Landing Page (~5 hrs)
-- [ ] 1.4.1 — Build root layout (fonts, metadata, providers)
-- [ ] 1.4.2 — Build Navbar component (logo, nav links, auth buttons, mobile menu)
-- [ ] 1.4.3 — Build Hero section (headline, subheadline, CTA buttons)
-- [ ] 1.4.4 — Build Features section (4 feature cards with icons)
-- [ ] 1.4.5 — Build How It Works section (3-step process)
-- [ ] 1.4.6 — Build Footer component
+- [x] 1.4.1 — Build root layout (fonts, metadata, providers)
+- [x] 1.4.2 — Build Navbar component (logo, nav links, auth buttons, mobile menu)
+- [x] 1.4.3 — Build Hero section (headline, subheadline, CTA buttons)
+- [x] 1.4.4 — Build Features section (4 feature cards with icons)
+- [x] 1.4.5 — Build How It Works section (3-step process)
+- [x] 1.4.6 — Build Footer component
 - [ ] 1.4.7 — Landing page responsive testing
 
 ### 1.5 Auth Pages (~4 hrs)
-- [ ] 1.5.1 — Build auth layout (centered card)
-- [ ] 1.5.2 — Build Login page with form, validation, error handling
-- [ ] 1.5.3 — Build Signup page with full registration form
-- [ ] 1.5.4 — Add loading states + redirect logic after auth
+- [x] 1.5.1 — Build auth layout (centered card)
+- [x] 1.5.2 — Build Login page with form, validation, error handling
+- [x] 1.5.3 — Build Signup page with full registration form
+- [x] 1.5.4 — Add loading states + redirect logic after auth
 - [ ] 1.5.5 — Test login/signup/redirect flow
 
 ### 1.6 Dashboard & User Profile (~6 hrs)
@@ -193,7 +193,7 @@
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 38 | 14 | In Progress |
+| Phase 1: Foundation | 38 | 30 | In Progress |
 | Phase 2: Core Features | 39 | 0 | Not Started |
 | Phase 3: Polish & Testing | 26 | 0 | Not Started |
 | Phase 4: Launch | 8 | 0 | Not Started |
