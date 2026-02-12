@@ -5,6 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useInterviewStore, type Message } from '@/stores/interviewStore';
 import {
@@ -42,6 +50,7 @@ export default function InterviewSessionPage() {
   } = useInterviewStore();
 
   const [input, setInput] = useState('');
+  const [showEndDialog, setShowEndDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -264,7 +273,7 @@ export default function InterviewSessionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
@@ -289,7 +298,7 @@ export default function InterviewSessionPage() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={handleEndInterview}
+            onClick={() => setShowEndDialog(true)}
             disabled={status === 'ending' || status === 'completed'}
           >
             {status === 'ending' ? (
@@ -362,9 +371,47 @@ export default function InterviewSessionPage() {
       {/* Completed Banner */}
       {status === 'completed' && (
         <div className="border-t bg-green-50 px-4 py-3 text-center text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
-          Interview completed! Redirecting to dashboard...
+          Interview completed! Generating feedback...
         </div>
       )}
+
+      {/* Ending Overlay */}
+      {status === 'ending' && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="font-medium">Ending interview &amp; generating feedback...</p>
+            <p className="text-sm text-muted-foreground">This may take a few seconds</p>
+          </div>
+        </div>
+      )}
+
+      {/* End Interview Confirmation Dialog */}
+      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End Interview?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to end this interview? Your responses will be
+              analyzed and you&apos;ll receive detailed feedback.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowEndDialog(false)}>
+              Continue Interview
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowEndDialog(false);
+                handleEndInterview();
+              }}
+            >
+              End &amp; Get Feedback
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Input Area */}
       {status === 'in_progress' && (
