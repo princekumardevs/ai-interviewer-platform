@@ -1,12 +1,12 @@
 #!/bin/bash
 # ============================================
-# Nginx + SSL Setup for princedev.in
+# Nginx + SSL Setup for softskilldojo.princedev.in
 # Run as root: sudo bash setup-nginx.sh
 # ============================================
 
 set -e
 
-DOMAIN="princedev.in"
+DOMAIN="softskilldojo.princedev.in"
 APP_PORT=3000
 
 echo "→ Configuring Nginx for $DOMAIN..."

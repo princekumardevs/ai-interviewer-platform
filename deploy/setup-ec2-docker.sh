@@ -43,7 +43,7 @@ echo "--- Configuring Nginx ---"
 cat > /etc/nginx/sites-available/ai-interviewer <<'NGINX'
 server {
     listen 80;
-    server_name princedev.in www.princedev.in;
+    server_name softskilldojo.princedev.in;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -75,8 +75,8 @@ echo " Setup complete!"
 echo "=========================================="
 echo ""
 echo " Next steps:"
-echo "   1. Point princedev.in A record to this server's IP"
-echo "   2. Run: sudo certbot --nginx -d princedev.in -d www.princedev.in"
+echo "   1. Point softskilldojo.princedev.in A record to this server's IP"
+echo "   2. Run: sudo certbot --nginx -d softskilldojo.princedev.in"
 echo "   3. Docker pull & run your container (CI/CD will handle this)"
 echo ""
 echo " Firewall: Make sure ports 22, 80, 443 are open in your Security Group"
