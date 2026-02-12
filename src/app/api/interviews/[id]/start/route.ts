@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getAnthropicClient, CLAUDE_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
+import { getGeminiClient, GEMINI_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
 import { buildSystemPrompt } from '@/lib/anthropic/prompts';
 
 /**
@@ -57,23 +57,23 @@ export async function POST(
       candidateName: interviewSession.user.name || 'the candidate',
     });
 
-    // Get Claude's opening message
-    const response = await getAnthropicClient().messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: [
+    // Get Gemini's opening message
+    const response = await getGeminiClient().models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [
         {
           role: 'user',
-          content: '[The candidate has joined the interview. Please introduce yourself and begin with your first question.]',
+          parts: [{ text: '[The candidate has joined the interview. Please introduce yourself and begin with your first question.]' }],
         },
       ],
+      config: {
+        maxOutputTokens: MAX_TOKENS,
+        systemInstruction: systemPrompt,
+      },
     });
 
     const openingMessage =
-      response.content[0].type === 'text'
-        ? response.content[0].text
-        : 'Hello! Thank you for joining. Could you start by telling me a bit about yourself?';
+      response.text || 'Hello! Thank you for joining. Could you start by telling me a bit about yourself?';
 
     // Save the system trigger and the assistant's opening as messages
     await prisma.interviewMessage.createMany({

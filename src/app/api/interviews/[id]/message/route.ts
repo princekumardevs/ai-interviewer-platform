@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getAnthropicClient, CLAUDE_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
+import { getGeminiClient, GEMINI_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
 import { buildSystemPrompt } from '@/lib/anthropic/prompts';
 
 export async function POST(
@@ -61,7 +61,7 @@ export async function POST(
       },
     });
 
-    // Build conversation history for Claude
+    // Build conversation history for Gemini
     const systemPrompt = buildSystemPrompt({
       role: interviewSession.role,
       interviewType: interviewSession.interviewType as 'technical' | 'behavioral' | 'mixed',
@@ -70,31 +70,32 @@ export async function POST(
       candidateName: interviewSession.user.name || 'the candidate',
     });
 
-    const conversationHistory = interviewSession.messages.map((msg) => ({
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
+    // Build Gemini conversation contents
+    const contents = interviewSession.messages.map((msg) => ({
+      role: msg.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: msg.content }],
     }));
 
     // Add the new user message
-    conversationHistory.push({
+    contents.push({
       role: 'user' as const,
-      content: content.trim(),
+      parts: [{ text: content.trim() }],
     });
 
-    // Call Claude
-    const response = await getAnthropicClient().messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemPrompt,
-      messages: conversationHistory,
+    // Call Gemini
+    const response = await getGeminiClient().models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: {
+        maxOutputTokens: MAX_TOKENS,
+        systemInstruction: systemPrompt,
+      },
     });
 
     const assistantContent =
-      response.content[0].type === 'text'
-        ? response.content[0].text
-        : 'I apologize, but I encountered an issue. Could you repeat that?';
+      response.text || 'I apologize, but I encountered an issue. Could you repeat that?';
 
-    // Save Claude's response
+    // Save AI response
     const assistantMessage = await prisma.interviewMessage.create({
       data: {
         sessionId,
