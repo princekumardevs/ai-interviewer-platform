@@ -15,27 +15,26 @@
 - [x] 1.1.5 — Create .env.local.example with all required env vars
 - [x] 1.1.6 — Verify path aliases (@/) work in tsconfig.json
 
-### 1.2 Supabase Setup & Database Schema (~5 hrs)
-- [ ] 1.2.1 — Create Supabase project, copy URL + keys into .env.local (MANUAL — do on supabase.com)
-- [x] 1.2.2 — Write SQL migration: users table (extends auth.users)
-- [x] 1.2.3 — Write SQL migration: interview_sessions table
-- [x] 1.2.4 — Write SQL migration: interview_messages table
-- [x] 1.2.5 — Write SQL migration: interview_feedback table
-- [x] 1.2.6 — Configure RLS policies for all tables
-- [x] 1.2.7 — Create Supabase browser client (lib/supabase/client.ts)
-- [x] 1.2.8 — Create Supabase server client (lib/supabase/server.ts)
-- [ ] 1.2.9 — Create Supabase Storage bucket for recordings (MANUAL — do in Supabase dashboard)
-- [x] 1.2.10 — Generate TypeScript types from schema (types/database.ts)
+### 1.2 Database & ORM Setup (~5 hrs)
+- [x] 1.2.1 — Create Neon PostgreSQL project, add DATABASE_URL to .env.local
+- [x] 1.2.2 — Set up Prisma ORM with Neon serverless adapter
+- [x] 1.2.3 — Write Prisma schema: User, Account, Session, VerificationToken (NextAuth)
+- [x] 1.2.4 — Write Prisma schema: InterviewSession, InterviewMessage, InterviewFeedback
+- [x] 1.2.5 — Configure prisma.config.ts with dotenv
+- [x] 1.2.6 — Push schema to Neon (prisma db push)
+- [x] 1.2.7 — Generate Prisma Client
+- [x] 1.2.8 — Create Prisma client singleton (lib/prisma.ts)
 
 ### 1.3 Authentication (~6 hrs)
-- [x] 1.3.1 — Enable email/password auth in Supabase dashboard
-- [x] 1.3.2 — Create Next.js middleware for auth (middleware.ts)
-- [x] 1.3.3 — Build POST /api/auth/signup route
-- [x] 1.3.4 — Build POST /api/auth/login route
-- [x] 1.3.5 — Build POST /api/auth/logout route
-- [x] 1.3.6 — Create useAuth hook (check session, user state)
-- [x] 1.3.7 — Create Zustand auth store (stores/authStore.ts)
-- [ ] 1.3.8 — Test auth flow end-to-end (signup → login → protected route → logout)
+- [x] 1.3.1 — Set up NextAuth.js v5 with JWT strategy
+- [x] 1.3.2 — Configure Google OAuth provider
+- [x] 1.3.3 — Configure Credentials provider with bcrypt
+- [x] 1.3.4 — Build POST /api/auth/register route
+- [x] 1.3.5 — Build NextAuth catch-all route ([...nextauth])
+- [x] 1.3.6 — Create useAuth hook (useSession wrapper + profile fetch)
+- [x] 1.3.7 — Create SessionProvider wrapper (providers.tsx)
+- [x] 1.3.8 — Create Next.js middleware for auth (middleware.ts)
+- [x] 1.3.9 — Test auth flow end-to-end (Google OAuth + credentials)
 
 ### 1.4 Landing Page (~5 hrs)
 - [x] 1.4.1 — Build root layout (fonts, metadata, providers)
@@ -44,31 +43,31 @@
 - [x] 1.4.4 — Build Features section (4 feature cards with icons)
 - [x] 1.4.5 — Build How It Works section (3-step process)
 - [x] 1.4.6 — Build Footer component
-- [ ] 1.4.7 — Landing page responsive testing
+- [x] 1.4.7 — Landing page responsive testing
 
 ### 1.5 Auth Pages (~4 hrs)
 - [x] 1.5.1 — Build auth layout (centered card)
 - [x] 1.5.2 — Build Login page with form, validation, error handling
 - [x] 1.5.3 — Build Signup page with full registration form
 - [x] 1.5.4 — Add loading states + redirect logic after auth
-- [ ] 1.5.5 — Test login/signup/redirect flow
+- [x] 1.5.5 — Test login/signup/redirect flow
 
 ### 1.6 Dashboard & User Profile (~6 hrs)
-- [ ] 1.6.1 — Build dashboard layout (sidebar + topbar + main content)
-- [ ] 1.6.2 — Build Sidebar component (nav items: Dashboard, New Interview, History, Profile)
-- [ ] 1.6.3 — Build dashboard home page (welcome, credits remaining, quick start, recent interviews)
-- [ ] 1.6.4 — Build GET /api/user/profile route
-- [ ] 1.6.5 — Build PATCH /api/user/profile route
-- [ ] 1.6.6 — Build Profile page (view/edit form)
-- [ ] 1.6.7 — Create protected layout (redirect if unauthenticated)
-- [ ] 1.6.8 — Test dashboard + profile CRUD
+- [x] 1.6.1 — Build dashboard layout (sidebar + topbar + main content)
+- [x] 1.6.2 — Build Sidebar component (nav items: Dashboard, New Interview, History, Profile)
+- [x] 1.6.3 — Build dashboard home page (welcome, credits remaining, quick start, recent interviews)
+- [x] 1.6.4 — Build GET /api/user/profile route
+- [x] 1.6.5 — Build PATCH /api/user/profile route
+- [x] 1.6.6 — Build Profile page (view/edit form)
+- [x] 1.6.7 — Create protected layout (redirect if unauthenticated)
+- [x] 1.6.8 — Test dashboard + profile CRUD
 
 ### ✅ Phase 1 Milestone Check
 - [ ] App loads and deploys to Vercel
-- [ ] User can sign up, log in, log out
-- [ ] Dashboard displays after login
-- [ ] Profile can be viewed and edited
-- [ ] Database schema is correct with RLS
+- [x] User can sign up, log in, log out
+- [x] Dashboard displays after login
+- [x] Profile can be viewed and edited
+- [x] Database schema pushed to Neon PostgreSQL
 
 ---
 
@@ -193,8 +192,8 @@
 
 | Phase | Tasks | Completed | Status |
 |-------|-------|-----------|--------|
-| Phase 1: Foundation | 38 | 30 | In Progress |
+| Phase 1: Foundation | 38 | 37 | Nearly Complete |
 | Phase 2: Core Features | 39 | 0 | Not Started |
 | Phase 3: Polish & Testing | 26 | 0 | Not Started |
 | Phase 4: Launch | 8 | 0 | Not Started |
-| **Total** | **111** | **0** | **Not Started** |
+| **Total** | **111** | **37** | **In Progress** |
