@@ -1,0 +1,43 @@
+# ============================================
+# Docker Compose — AI Interviewer Platform
+# ============================================
+# Usage:
+#   docker compose up -d          (start)
+#   docker compose down           (stop)
+#   docker compose up -d --build  (rebuild & start)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-interviewer
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+  # Optional: Nginx reverse proxy with SSL
+  # Uncomment if you want Nginx inside Docker instead of host-level
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: ai-interviewer-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - /etc/letsencrypt:/etc/letsencrypt:ro
+  #   depends_on:
+  #     app:
+  #       condition: service_healthy
