@@ -208,17 +208,20 @@ export default function InterviewSessionPage() {
 
       if (!res.ok) throw new Error('Failed to end interview');
 
+      const data = await res.json();
       setStatus('completed');
       toast({
         title: 'Interview Completed',
-        description: 'Your interview has been saved.',
+        description: data.feedbackGenerated
+          ? 'Your feedback is ready!'
+          : 'Your interview has been saved.',
       });
 
-      // Redirect to dashboard after a short delay
+      // Redirect to feedback page
       setTimeout(() => {
         reset();
-        router.push('/dashboard');
-      }, 2000);
+        router.push(`/interview/${sessionId}/feedback`);
+      }, 1500);
     } catch {
       setStatus('in_progress');
       toast({
