@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Mic } from 'lucide-react';
 
 export function Navbar() {
-  const { user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
@@ -28,7 +28,7 @@ export function Navbar() {
           <Link href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             How It Works
           </Link>
-          {isLoading ? null : user ? (
+          {isLoading ? null : isAuthenticated ? (
             <Button asChild>
               <Link href="/dashboard">Dashboard</Link>
             </Button>
@@ -68,7 +68,7 @@ export function Navbar() {
               >
                 How It Works
               </Link>
-              {isLoading ? null : user ? (
+              {isLoading ? null : isAuthenticated ? (
                 <Button asChild onClick={() => setOpen(false)}>
                   <Link href="/dashboard">Dashboard</Link>
                 </Button>

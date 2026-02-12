@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// NextAuth.js required tables
+// ============================================
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+
+  // Custom fields
+  targetRole          String  @default("Software Engineer") @map("target_role")
+  experienceLevel     String  @default("mid") @map("experience_level")
+  interviewsRemaining Int     @default(5) @map("interviews_remaining")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  accounts          Account[]
+  sessions          Session[]
+  interviewSessions InterviewSession[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// Application tables
+// ============================================
+
+model InterviewSession {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  role            String
+  interviewType   String    @default("technical") @map("interview_type")
+  durationMinutes Int       @default(15) @map("duration_minutes")
+  status          String    @default("in_progress")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  recordingUrl    String?   @map("recording_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages InterviewMessage[]
+  feedback InterviewFeedback?
+
+  @@map("interview_sessions")
+}
+
+model InterviewMessage {
+  id                   String   @id @default(cuid())
+  sessionId            String   @map("session_id")
+  role                 String   // 'user' | 'assistant'
+  content              String   @db.Text
+  timestamp            DateTime @default(now())
+  audioDurationSeconds Float?   @map("audio_duration_seconds")
+
+  session InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("interview_messages")
+}
+
+model InterviewFeedback {
+  id                  String   @id @default(cuid())
+  sessionId           String   @unique @map("session_id")
+  overallScore        Int      @map("overall_score")
+  technicalDepthScore Int      @map("technical_depth_score")
+  communicationScore  Int      @map("communication_score")
+  structureScore      Int      @map("structure_score")
+  confidenceScore     Int      @map("confidence_score")
+  strengths           String   @db.Text
+  improvements        String   @db.Text
+  detailedFeedback    Json     @default("{}") @map("detailed_feedback")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  session InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("interview_feedback")
+}

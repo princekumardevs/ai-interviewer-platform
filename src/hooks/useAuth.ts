@@ -1,118 +1,108 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuthStore } from '@/stores/authStore';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import { useEffect, useState } from 'react';
+
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  targetRole: string;
+  experienceLevel: string;
+  interviewsRemaining: number;
+}
 
 export function useAuth() {
-  const { user, isLoading, setUser, reset } = useAuthStore();
-  const supabase = useMemo(() => createClient(), []);
-  const initialized = useRef(false);
+  const { data: session, status } = useSession();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  // Fetch the current user's profile
-  const fetchUser = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+  const isLoading = status === 'loading' || profileLoading;
+  const isAuthenticated = status === 'authenticated';
 
-      if (authUser) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-
-        setUser(profile);
-      } else {
-        setUser(null);
-      }
-    } catch {
-      setUser(null);
+  // Fetch full profile when session is available
+  useEffect(() => {
+    if (isAuthenticated && session?.user?.id && !profile) {
+      setProfileLoading(true);
+      fetch('/api/user/profile')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && !data.error) {
+            setProfile(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setProfileLoading(false));
     }
-  };
+    if (!isAuthenticated && status !== 'loading') {
+      setProfile(null);
+    }
+  }, [isAuthenticated, session?.user?.id, status, profile]);
 
-  // Sign up
-  const signUp = async (
+  // Sign up with credentials
+  const handleSignUp = async (
     email: string,
     password: string,
-    fullName: string,
+    name: string,
     targetRole?: string,
     experienceLevel?: string
   ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name, targetRole, experienceLevel }),
     });
 
-    if (error) throw new Error(error.message);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-    // Update profile with additional fields
-    if (data.user) {
-      await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          target_role: targetRole || 'Software Engineer',
-          experience_level: experienceLevel || 'mid',
-        } as never)
-        .eq('id', data.user.id);
-    }
+    const result = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+    });
 
-    // Redirect with full navigation to avoid Supabase auth lock AbortError
+    if (result?.error) throw new Error(result.error);
+
     window.location.href = '/dashboard';
   };
 
-  // Sign in
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  // Sign in with credentials
+  const handleSignIn = async (email: string, password: string) => {
+    const result = await signIn('credentials', {
       email,
       password,
+      redirect: false,
     });
 
-    if (error) throw new Error(error.message);
+    if (result?.error) throw new Error('Invalid email or password');
 
-    // Redirect with full navigation to avoid Supabase auth lock AbortError
     window.location.href = '/dashboard';
+  };
+
+  // Sign in with Google
+  const handleGoogleSignIn = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
   };
 
   // Sign out
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    reset();
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
     window.location.href = '/';
   };
 
-  // Initialize auth state once on mount
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    fetchUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await fetchUser();
-        } else if (event === 'SIGNED_OUT') {
-          reset();
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return {
-    user,
+    user: profile,
+    session,
     isLoading,
-    signUp,
-    signIn,
-    signOut,
-    refreshUser: fetchUser,
+    isAuthenticated,
+    signUp: handleSignUp,
+    signIn: handleSignIn,
+    signInWithGoogle: handleGoogleSignIn,
+    signOut: handleSignOut,
+    refreshUser: () => {
+      setProfile(null);
+    },
   };
 }
