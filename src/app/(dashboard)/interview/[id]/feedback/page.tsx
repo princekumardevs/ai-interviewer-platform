@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { RadarChart } from '@/components/feedback/RadarChart';
 import {
   ArrowLeft,
   Loader2,
@@ -295,6 +296,23 @@ export default function FeedbackPage() {
           >
             {getScoreLabel(feedback.overallScore)}
           </Badge>
+        </CardContent>
+      </Card>
+
+      {/* Radar Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Performance Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadarChart
+            scores={[
+              { label: 'Technical', value: feedback.technicalDepthScore },
+              { label: 'Communication', value: feedback.communicationScore },
+              { label: 'Structure', value: feedback.structureScore },
+              { label: 'Confidence', value: feedback.confidenceScore },
+            ]}
+          />
         </CardContent>
       </Card>
 

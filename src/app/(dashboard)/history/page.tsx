@@ -198,7 +198,7 @@ export default function HistoryPage() {
                   onClick={() =>
                     router.push(
                       s.status === 'completed'
-                        ? `/interview/${s.id}/feedback`
+                        ? `/history/${s.id}`
                         : `/interview/${s.id}`
                     )
                   }

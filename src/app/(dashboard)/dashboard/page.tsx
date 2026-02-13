@@ -259,7 +259,7 @@ export default function DashboardPage() {
                   key={s.id}
                   href={
                     s.status === 'completed'
-                      ? `/interview/${s.id}/feedback`
+                      ? `/history/${s.id}`
                       : `/interview/${s.id}`
                   }
                 >
