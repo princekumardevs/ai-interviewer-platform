@@ -71,7 +71,6 @@ export async function POST(
     );
 
     const MAX_RETRIES = 3;
-    let feedbackError: unknown = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
@@ -107,10 +106,9 @@ export async function POST(
             detailedFeedback: parsed.detailedFeedback || [],
           },
         });
-        feedbackError = null;
         break; // Success — exit retry loop
       } catch (err: unknown) {
-        feedbackError = err;
+
         const isRateLimit =
           (err instanceof Error && err.message?.includes('429')) ||
           (err as { status?: number })?.status === 429;
