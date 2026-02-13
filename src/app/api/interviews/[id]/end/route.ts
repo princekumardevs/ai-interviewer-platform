@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getGeminiClient, GEMINI_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
 import { buildFeedbackPrompt } from '@/lib/anthropic/feedback';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/interviews/[id]/end
  * Marks the interview session as completed and generates AI feedback.

@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getGeminiClient, GEMINI_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
 import { buildSystemPrompt } from '@/lib/anthropic/prompts';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/interviews/[id]/start
  * Generates the AI interviewer's opening message to kick off the interview.
