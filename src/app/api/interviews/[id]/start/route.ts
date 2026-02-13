@@ -57,23 +57,65 @@ export async function POST(
       candidateName: interviewSession.user.name || 'the candidate',
     });
 
-    // Get Gemini's opening message
-    const response = await getGeminiClient().models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: '[The candidate has joined the interview. Please introduce yourself and begin with your first question.]' }],
-        },
-      ],
-      config: {
-        maxOutputTokens: MAX_TOKENS,
-        systemInstruction: systemPrompt,
-      },
-    });
+    // Get Gemini's opening message with retry for rate limiting
+    const MAX_RETRIES = 3;
+    let openingMessage: string | null = null;
+    let lastError: unknown = null;
 
-    const openingMessage =
-      response.text || 'Hello! Thank you for joining. Could you start by telling me a bit about yourself?';
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const response = await getGeminiClient().models.generateContent({
+          model: GEMINI_MODEL,
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: '[The candidate has joined the interview. Please introduce yourself and begin with your first question.]' }],
+            },
+          ],
+          config: {
+            maxOutputTokens: MAX_TOKENS,
+            systemInstruction: systemPrompt,
+          },
+        });
+
+        openingMessage =
+          response.text || 'Hello! Thank you for joining. Could you start by telling me a bit about yourself?';
+        break; // Success
+      } catch (err: unknown) {
+        lastError = err;
+        const isRateLimit =
+          (err instanceof Error && err.message?.includes('429')) ||
+          (err as { status?: number })?.status === 429;
+
+        if (isRateLimit && attempt < MAX_RETRIES - 1) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.warn(
+            `Gemini rate limited on start (attempt ${attempt + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (!openingMessage) {
+      console.error('Error starting interview:', lastError);
+      const isRateLimit =
+        (lastError instanceof Error && lastError.message?.includes('429')) ||
+        (lastError as { status?: number })?.status === 429;
+
+      if (isRateLimit) {
+        return NextResponse.json(
+          { error: 'The AI service is currently busy. Please wait a moment and try again.' },
+          { status: 429 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Failed to start interview' },
+        { status: 500 }
+      );
+    }
 
     // Save the system trigger and the assistant's opening as messages
     await prisma.interviewMessage.createMany({

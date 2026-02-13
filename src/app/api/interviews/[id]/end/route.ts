@@ -57,56 +57,77 @@ export async function POST(
       },
     });
 
-    // Generate feedback with Gemini (non-blocking — we save it async)
+    // Generate feedback with Gemini (with retry for rate limiting)
     let feedback = null;
-    try {
-      const feedbackPrompt = buildFeedbackPrompt(
-        {
-          role: interviewSession.role,
-          interviewType: interviewSession.interviewType as 'technical' | 'behavioral' | 'mixed',
-          experienceLevel: 'mid',
-          durationMinutes: interviewSession.durationMinutes,
-          candidateName: session.user.name || 'Candidate',
-        },
-        interviewSession.messages
-      );
+    const feedbackPrompt = buildFeedbackPrompt(
+      {
+        role: interviewSession.role,
+        interviewType: interviewSession.interviewType as 'technical' | 'behavioral' | 'mixed',
+        experienceLevel: 'mid',
+        durationMinutes: interviewSession.durationMinutes,
+        candidateName: session.user.name || 'Candidate',
+      },
+      interviewSession.messages
+    );
 
-      const client = getGeminiClient();
-      const response = await client.models.generateContent({
-        model: GEMINI_MODEL,
-        contents: [{ role: 'user', parts: [{ text: feedbackPrompt }] }],
-        config: {
-          maxOutputTokens: MAX_TOKENS * 2, // feedback needs more tokens
-        },
-      });
+    const MAX_RETRIES = 3;
+    let feedbackError: unknown = null;
 
-      const responseText =
-        response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const client = getGeminiClient();
+        const response = await client.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: [{ role: 'user', parts: [{ text: feedbackPrompt }] }],
+          config: {
+            maxOutputTokens: MAX_TOKENS * 2, // feedback needs more tokens
+          },
+        });
 
-      // Parse the JSON response — strip markdown fences if present
-      const jsonStr = responseText.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
-      const parsed = JSON.parse(jsonStr);
+        const responseText =
+          response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-      // Validate scores are numbers in range
-      const clamp = (v: unknown) => Math.max(1, Math.min(100, Number(v) || 50));
+        // Parse the JSON response — strip markdown fences if present
+        const jsonStr = responseText.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
+        const parsed = JSON.parse(jsonStr);
 
-      feedback = await prisma.interviewFeedback.create({
-        data: {
-          sessionId,
-          overallScore: clamp(parsed.overallScore),
-          technicalDepthScore: clamp(parsed.technicalDepthScore),
-          communicationScore: clamp(parsed.communicationScore),
-          structureScore: clamp(parsed.structureScore),
-          confidenceScore: clamp(parsed.confidenceScore),
-          strengths: String(parsed.strengths || ''),
-          improvements: String(parsed.improvements || ''),
-          detailedFeedback: parsed.detailedFeedback || [],
-        },
-      });
-    } catch (feedbackError) {
-      console.error('Error generating feedback:', feedbackError);
-      // Don't fail the whole request if feedback generation fails
-      // The user can still see their completed interview
+        // Validate scores are numbers in range
+        const clamp = (v: unknown) => Math.max(1, Math.min(100, Number(v) || 50));
+
+        feedback = await prisma.interviewFeedback.create({
+          data: {
+            sessionId,
+            overallScore: clamp(parsed.overallScore),
+            technicalDepthScore: clamp(parsed.technicalDepthScore),
+            communicationScore: clamp(parsed.communicationScore),
+            structureScore: clamp(parsed.structureScore),
+            confidenceScore: clamp(parsed.confidenceScore),
+            strengths: String(parsed.strengths || ''),
+            improvements: String(parsed.improvements || ''),
+            detailedFeedback: parsed.detailedFeedback || [],
+          },
+        });
+        feedbackError = null;
+        break; // Success — exit retry loop
+      } catch (err: unknown) {
+        feedbackError = err;
+        const isRateLimit =
+          (err instanceof Error && err.message?.includes('429')) ||
+          (err as { status?: number })?.status === 429;
+
+        if (isRateLimit && attempt < MAX_RETRIES - 1) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.warn(
+            `Gemini rate limited during feedback (attempt ${attempt + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        console.error('Error generating feedback:', err);
+        // Don't fail the whole request if feedback generation fails
+        break;
+      }
     }
 
     return NextResponse.json({

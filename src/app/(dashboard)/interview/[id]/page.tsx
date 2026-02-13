@@ -50,6 +50,7 @@ export default function InterviewSessionPage() {
     setSession,
     setStatus,
     addMessage,
+    updateLastMessage,
     setAiThinking,
     setError,
     setStartedAt,
@@ -59,7 +60,7 @@ export default function InterviewSessionPage() {
 
   const [input, setInput] = useState('');
   const [showEndDialog, setShowEndDialog] = useState(false);
-  const [inputMode, setInputMode] = useState<'text' | 'voice'>('text');
+  const [inputMode, setInputMode] = useState<'text' | 'voice'>('voice');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,6 +69,76 @@ export default function InterviewSessionPage() {
   const tts = useTextToSpeech({ rate: 1.05 });
   const ttsRef = useRef(tts);
   useEffect(() => { ttsRef.current = tts; }, [tts]);
+
+  // Helper to read SSE stream from the message API
+  const readMessageStream = useCallback(async (response: Response) => {
+    // Add an empty assistant message that we'll fill incrementally
+    addMessage({
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+    });
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let displayedContent = '';
+    let streamDone = false;
+
+    // Typing animation: reveal words gradually
+    const animateTyping = (): Promise<void> => {
+      return new Promise((resolve) => {
+        const tick = () => {
+          if (displayedContent.length < fullContent.length) {
+            // Reveal next few words
+            const remaining = fullContent.slice(displayedContent.length);
+            const nextChunk = remaining.match(/^(\S+\s*){1,3}/)?.[0] || remaining.charAt(0);
+            displayedContent += nextChunk;
+            updateLastMessage(displayedContent);
+            requestAnimationFrame(tick);
+          } else if (streamDone) {
+            // All content displayed and stream is done
+            updateLastMessage(fullContent);
+            resolve();
+          } else {
+            // Waiting for more content from stream
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      });
+    };
+
+    // Start animation loop
+    const animationPromise = animateTyping();
+
+    // Read the stream and fill the buffer
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value, { stream: true });
+      const lines = text.split('\n').filter((l) => l.startsWith('data: '));
+
+      for (const line of lines) {
+        const json = JSON.parse(line.slice(6));
+        if (json.type === 'chunk') {
+          fullContent += json.content;
+        } else if (json.type === 'error') {
+          streamDone = true;
+          await animationPromise;
+          throw new Error(json.error);
+        }
+        // 'done' type = stream finished, message saved to DB
+      }
+    }
+
+    streamDone = true;
+    await animationPromise;
+
+    return fullContent;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addMessage, updateLastMessage]);
 
   const sendMessageFromVoice = useCallback(async (voiceText: string) => {
     if (!voiceText.trim() || isAiThinking || status !== 'in_progress') return;
@@ -90,17 +161,11 @@ export default function InterviewSessionPage() {
 
       if (!response.ok) throw new Error('Failed to send message');
 
-      const data = await response.json();
-      addMessage({
-        id: data.id,
-        role: 'assistant',
-        content: data.content,
-        timestamp: data.timestamp,
-      });
+      const fullContent = await readMessageStream(response);
 
       // Speak AI response via ref to avoid circular dependency
-      if (ttsRef.current.isEnabled && data.content) {
-        ttsRef.current.speak(data.content);
+      if (ttsRef.current.isEnabled && fullContent) {
+        ttsRef.current.speak(fullContent);
       }
     } catch {
       setError('Failed to get response. Please try again.');
@@ -108,7 +173,7 @@ export default function InterviewSessionPage() {
       setAiThinking(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAiThinking, status, sessionId, addMessage, setAiThinking, setError]);
+  }, [isAiThinking, status, sessionId, addMessage, setAiThinking, setError, readMessageStream]);
 
   const {
     transcript,
@@ -133,8 +198,10 @@ export default function InterviewSessionPage() {
   }, [messages, isAiThinking]);
 
   // Start the interview on mount
+  const initCalledRef = useRef(false);
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || initCalledRef.current) return;
+    initCalledRef.current = true;
 
     async function initInterview() {
       setStatus('starting');
@@ -185,9 +252,9 @@ export default function InterviewSessionPage() {
           timestamp: new Date().toISOString(),
         });
 
-        // Speak the opening message
-        if (tts.isEnabled && startData.content) {
-          tts.speak(startData.content);
+        // Speak the opening message (use ref for latest TTS state)
+        if (ttsRef.current.isEnabled && startData.content) {
+          ttsRef.current.speak(startData.content);
         }
 
         setStatus('in_progress');
@@ -256,17 +323,11 @@ export default function InterviewSessionPage() {
         throw new Error('Failed to send message');
       }
 
-      const data = await response.json();
-      addMessage({
-        id: data.id,
-        role: 'assistant',
-        content: data.content,
-        timestamp: data.timestamp,
-      });
+      const fullContent = await readMessageStream(response);
 
       // Speak AI response if TTS is enabled
-      if (tts.isEnabled && data.content) {
-        tts.speak(data.content);
+      if (ttsRef.current.isEnabled && fullContent) {
+        ttsRef.current.speak(fullContent);
       }
     } catch {
       setError('Failed to get response. Please try again.');
@@ -279,7 +340,7 @@ export default function InterviewSessionPage() {
       setAiThinking(false);
       textareaRef.current?.focus();
     }
-  }, [input, isAiThinking, status, sessionId, addMessage, setAiThinking, setError, toast]);
+  }, [input, isAiThinking, status, sessionId, addMessage, setAiThinking, setError, toast, readMessageStream]);
 
   // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -432,8 +493,8 @@ export default function InterviewSessionPage() {
           </div>
         ))}
 
-        {/* AI Thinking Indicator */}
-        {isAiThinking && (
+        {/* AI Thinking Indicator — hide when streaming has started (last msg is assistant) */}
+        {isAiThinking && messages[messages.length - 1]?.role !== 'assistant' && (
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
               <Bot className="h-4 w-4" />

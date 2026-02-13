@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import {
   TrendingDown,
   CheckCircle2,
   Target,
+  AlertCircle,
 } from 'lucide-react';
 
 interface DetailedQuestion {
@@ -105,6 +106,9 @@ function ScoreCard({
   );
 }
 
+const MAX_POLL_ATTEMPTS = 10;
+const POLL_INTERVAL_MS = 3000;
+
 export default function FeedbackPage() {
   const params = useParams();
   const router = useRouter();
@@ -113,23 +117,46 @@ export default function FeedbackPage() {
   const [session, setSession] = useState<SessionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackFailed, setFeedbackFailed] = useState(false);
+  const pollCount = useRef(0);
+  const pollTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchFeedback = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/interviews/${sessionId}`);
+      if (!res.ok) throw new Error('Failed to load feedback');
+      const data: SessionData = await res.json();
+      setSession(data);
+      setLoading(false);
+
+      // If no feedback yet and status is completed, keep polling
+      if (data.status === 'completed' && !data.feedback) {
+        pollCount.current += 1;
+        if (pollCount.current >= MAX_POLL_ATTEMPTS) {
+          setFeedbackFailed(true);
+          return;
+        }
+        pollTimer.current = setTimeout(fetchFeedback, POLL_INTERVAL_MS);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setLoading(false);
+    }
+  }, [sessionId]);
 
   useEffect(() => {
-    async function fetchFeedback() {
-      try {
-        const res = await fetch(`/api/interviews/${sessionId}`);
-        if (!res.ok) throw new Error('Failed to load feedback');
-        const data = await res.json();
-        setSession(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchFeedback();
-  }, [sessionId]);
+    return () => {
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+    };
+  }, [fetchFeedback]);
+
+  const handleRetry = () => {
+    setFeedbackFailed(false);
+    pollCount.current = 0;
+    setLoading(true);
+    fetchFeedback();
+  };
 
   if (loading) {
     return (
@@ -164,6 +191,32 @@ export default function FeedbackPage() {
   const feedback = session.feedback;
 
   if (!feedback) {
+    if (feedbackFailed) {
+      return (
+        <div className="flex h-full items-center justify-center p-6">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <AlertCircle className="h-8 w-8 text-orange-500" />
+            <div>
+              <p className="text-lg font-semibold">
+                Feedback generation failed
+              </p>
+              <p className="text-sm text-muted-foreground">
+                The AI service may be temporarily overloaded. Please try again.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => router.push('/dashboard')}>
+                Back to Dashboard
+              </Button>
+              <Button onClick={handleRetry}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -173,15 +226,9 @@ export default function FeedbackPage() {
               Feedback is being generated...
             </p>
             <p className="text-sm text-muted-foreground">
-              This may take a moment. Please refresh the page shortly.
+              This may take a moment. Checking automatically...
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
-            Refresh
-          </Button>
         </div>
       </div>
     );

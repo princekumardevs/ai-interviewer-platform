@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { getGeminiClient, GEMINI_MODEL, MAX_TOKENS } from '@/lib/anthropic/client';
 import { buildSystemPrompt } from '@/lib/anthropic/prompts';
 
+// Prevent Next.js from buffering the streaming response
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -82,38 +85,120 @@ export async function POST(
       parts: [{ text: content.trim() }],
     });
 
-    // Call Gemini
-    const response = await getGeminiClient().models.generateContent({
-      model: GEMINI_MODEL,
-      contents,
-      config: {
-        maxOutputTokens: MAX_TOKENS,
-        systemInstruction: systemPrompt,
+    // Retry logic for rate limiting before streaming
+    const MAX_RETRIES = 3;
+    let streamResponse: AsyncIterable<{ text?: string | null | undefined }> | null = null;
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const response = await getGeminiClient().models.generateContentStream({
+          model: GEMINI_MODEL,
+          contents,
+          config: {
+            maxOutputTokens: MAX_TOKENS,
+            systemInstruction: systemPrompt,
+          },
+        });
+        streamResponse = response;
+        break;
+      } catch (err: unknown) {
+        lastError = err;
+        const isRateLimit =
+          (err instanceof Error && err.message?.includes('429')) ||
+          (err as { status?: number })?.status === 429;
+
+        if (isRateLimit && attempt < MAX_RETRIES - 1) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.warn(
+            `Gemini rate limited (attempt ${attempt + 1}/${MAX_RETRIES}), retrying in ${delay}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (!streamResponse) {
+      console.error('Error in interview message:', lastError);
+      const isRateLimit =
+        (lastError instanceof Error && lastError.message?.includes('429')) ||
+        (lastError as { status?: number })?.status === 429;
+
+      if (isRateLimit) {
+        return NextResponse.json(
+          { error: 'The AI service is currently busy. Please wait a moment and try again.' },
+          { status: 429 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Failed to process message' },
+        { status: 500 }
+      );
+    }
+
+    // Stream the response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let fullContent = '';
+        try {
+          let chunkIndex = 0;
+          for await (const chunk of streamResponse!) {
+            const text = chunk.text ?? '';
+            if (text) {
+              fullContent += text;
+              console.log(`[Stream] chunk ${chunkIndex++}: ${text.length} chars`);
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: text })}\n\n`)
+              );
+            }
+          }
+          console.log(`[Stream] complete: ${fullContent.length} total chars`);
+
+          // Save complete message to DB
+          const finalContent = fullContent || 'I apologize, but I encountered an issue. Could you repeat that?';
+          const assistantMessage = await prisma.interviewMessage.create({
+            data: {
+              sessionId,
+              role: 'assistant',
+              content: finalContent,
+            },
+          });
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: 'done',
+                id: assistantMessage.id,
+                timestamp: assistantMessage.timestamp,
+              })}\n\n`
+            )
+          );
+        } catch (err) {
+          console.error('Streaming error:', err);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', error: 'Stream interrupted' })}\n\n`)
+          );
+        } finally {
+          controller.close();
+        }
       },
     });
 
-    const assistantContent =
-      response.text || 'I apologize, but I encountered an issue. Could you repeat that?';
-
-    // Save AI response
-    const assistantMessage = await prisma.interviewMessage.create({
-      data: {
-        sessionId,
-        role: 'assistant',
-        content: assistantContent,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
       },
-    });
-
-    return NextResponse.json({
-      id: assistantMessage.id,
-      role: 'assistant',
-      content: assistantContent,
-      timestamp: assistantMessage.timestamp,
     });
   } catch (error) {
-    console.error('Error in interview message:', error);
+    console.error('Unexpected error in interview message handler:', error);
     return NextResponse.json(
-      { error: 'Failed to process message' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

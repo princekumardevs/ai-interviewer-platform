@@ -35,6 +35,7 @@ interface InterviewState {
   }) => void;
   setStatus: (status: InterviewState['status']) => void;
   addMessage: (message: Message) => void;
+  updateLastMessage: (content: string) => void;
   setAiThinking: (thinking: boolean) => void;
   setError: (error: string | null) => void;
   setStartedAt: (time: string) => void;
@@ -73,6 +74,15 @@ export const useInterviewStore = create<InterviewState>((set) => ({
     set((state) => ({
       messages: [...state.messages, message],
     })),
+
+  updateLastMessage: (content) =>
+    set((state) => {
+      const msgs = [...state.messages];
+      if (msgs.length > 0) {
+        msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content };
+      }
+      return { messages: msgs };
+    }),
 
   setAiThinking: (thinking) => set({ isAiThinking: thinking }),
 
