@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -28,20 +29,20 @@ const AUTH_ERRORS: Record<string, string> = {
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const { status } = useSession();
   const authError = searchParams.get('error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle, isAuthenticated, isLoading } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
-  // Redirect to dashboard if already authenticated (handles post-OAuth redirect)
+  // Hard redirect if already authenticated (handles post-OAuth callback)
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      router.replace('/dashboard');
+    if (status === 'authenticated') {
+      window.location.href = '/dashboard';
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +71,8 @@ function LoginForm() {
     }
   };
 
-  // Show nothing while checking auth status to avoid flash
-  if (isLoading || isAuthenticated) {
+  // Show spinner while session is loading or user is authenticated (redirecting)
+  if (status === 'loading' || status === 'authenticated') {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
