@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,20 @@ const AUTH_ERRORS: Record<string, string> = {
 
 function LoginForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const authError = searchParams.get('error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+
+  // Redirect to dashboard if already authenticated (handles post-OAuth redirect)
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +69,17 @@ function LoginForm() {
       setLoading(false);
     }
   };
+
+  // Show nothing while checking auth status to avoid flash
+  if (isLoading || isAuthenticated) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
