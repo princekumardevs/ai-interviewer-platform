@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -15,10 +16,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Chrome } from 'lucide-react';
+import { Loader2, Chrome, AlertCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-export default function LoginPage() {
+const AUTH_ERRORS: Record<string, string> = {
+  OAuthAccountNotLinked: 'This email is already registered with a different sign-in method.',
+  OAuthCallbackError: 'There was a problem with the Google sign-in. Please try again.',
+  OAuthSignin: 'Could not start Google sign-in. Please try again.',
+  Default: 'An authentication error occurred. Please try again.',
+};
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get('error');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +70,12 @@ export default function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {authError && (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{AUTH_ERRORS[authError] || `${AUTH_ERRORS.Default} (${authError})`}</span>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -115,5 +131,13 @@ export default function LoginPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

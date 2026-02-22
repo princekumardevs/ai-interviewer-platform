@@ -8,7 +8,9 @@ import { prisma } from '@/lib/prisma';
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    Google,
+    Google({
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       name: 'credentials',
       credentials: {
@@ -50,11 +52,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   trustHost: true,
+  debug: process.env.NODE_ENV === 'development',
   pages: {
     signIn: '/login',
     error: '/login',
   },
   callbacks: {
+    async signIn({ user, account }) {
+      console.log('[Auth] signIn callback:', { userId: user?.id, provider: account?.provider });
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
