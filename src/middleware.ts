@@ -4,7 +4,7 @@ import { getToken } from 'next-auth/jwt';
 
 // Lightweight middleware — only checks JWT token, no Prisma/bcrypt imports
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
+  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
   const { pathname } = request.nextUrl;
 
   // Auth pages — redirect to dashboard if already logged in
